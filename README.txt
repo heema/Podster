@@ -7,6 +7,7 @@ podster [OPTIONS]
 
 DESCRIPTION
 A podcatcher script, it remembers what podcasts that you downloaded and you could either download or listen to new feeds
+It detects BitTorrent files and opens them with the appropriate client that’s specified in the script
 
 OPTIONS
 -a, --archive		Copies the podcasts to a specified location
