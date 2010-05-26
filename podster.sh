@@ -24,23 +24,23 @@ VER=1.7
 #####################################################
 
 main_directory="$HOME/Podcast"
-download_directory="/media/win_d/Podster/shows"
-archive_directory="/media/win_c/Users/heema/Desktop/shows"
-PODLIST="/home/heema/Dropbox/Personal/Scripts/Podster/podlist.txt"
-Titles="/home/heema/Dropbox/Personal/Scripts/Podster/titles.txt"
+download_directory="$main_directory/shows"
+archive_directory="$main_directory/Archive"
+PODLIST="$main_directory/podlist.txt"
+Titles="$main_directory/titles.txt"
 temp_directory="$main_directory/temp"
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #NOTE: Anything in the temp_directory will be deleted
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-history="/home/heema/Dropbox/Personal/Scripts/Podster/downloaded_history.txt"
+history="$main_directory/downloaded_history.txt"
 DATESTR=`date +'%d-%m-%Y %H:%M'`
 podcast_number="4"
 #alarm="/usr/lib/openoffice/share/gallery/sounds/applause.wav"
 multimedia_player="xmms"
 stream_player="vlc"
-bittorrent_client="/home/heema/Programs/Transgui/transgui"
+bittorrent_client="transgui"
 
 #<--------------------------------------------------->
 
