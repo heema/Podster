@@ -14,8 +14,8 @@
 # Some code was inspired from bashpodder
 # http://linc.homeunix.org:8080/scripts/bashpodder/
 #
-# last update : 25-05-2010
-VER=1.7
+# last update : 27-05-2010
+VER=1.7.1
 #
 #####################################################
 
@@ -380,7 +380,7 @@ then
                 <template match="item">                           
                 <value-of select="link"/><text>&#10;</text>            
         </template>                                                    
-        </stylesheet>' > "$main_directory/parse_all.xsl"
+        </stylesheet>' > "$main_directory/parse_link.xsl"
 fi
 
 if [ ! -f "$main_directory/parse_all_link.xsl" ]
@@ -397,7 +397,7 @@ then
                 <value-of select="title"/><text>&#10;</text>
                 <value-of select="link"/><text>&#10;</text>
         </template>
-        </stylesheet>' > "$main_directory/parse_all.xsl"
+        </stylesheet>' > "$main_directory/parse_all_link.xsl"
 fi
 
 cd "$temp_directory"
