@@ -14,8 +14,8 @@
 # Some code was inspired from bashpodder
 # http://linc.homeunix.org:8080/scripts/bashpodder/
 #
-# last update : 27-05-2010
-VER=1.7.1
+# last update : 29-05-2010
+VER=1.7.2
 #
 #####################################################
 
@@ -555,6 +555,12 @@ do
 	    if [ "$Bitt" == "BitTorrent" ];then
 		nohup "$bittorrent_client" "$download_directory/$clean_tag_bit" &
 		sleep 3
+		read -p "Delete torrent file ? (y/n) " del_torr
+
+		if [ "$del_torr" == "y" ] || [ "$del_torr" == "Y" ];then
+			rm "$download_directory/$clean_tag_bit"
+		fi
+
 	    fi
 
 	DOWNLOAD_SHOWS_NUM=$((DOWNLOAD_SHOWS_NUM+1))
