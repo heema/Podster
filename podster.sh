@@ -81,6 +81,29 @@ echo "]"
 
 #<--------------------------------------------------->
 
+function DEPENDENCY_CHECK {
+        DEPENDENCIES="wget awk sed"
+ 
+        deps_ok=YES
+        for dep in $DEPENDENCIES
+        do
+                if ! which $dep &>/dev/null;  then
+                        echo -e "This script requires $dep to run but it is not installed"
+                        #echo -e "If you are running ubuntu or debian you might be able to install $dep with the following  command"
+                        #echo -e "\t\tsudo apt-get install $dep\n"
+                        deps_ok=NO
+                fi
+        done
+        if [[ "$deps_ok" == "NO" ]]; then
+                echo -e "Unmet dependencies, Aborting!"
+                exit 1
+        else
+                return 0
+        fi
+}
+
+#<--------------------------------------------------->
+
 # Creates a lock file to stop a second occurrence of the script
 if [ -f "$main_directory/lock" ];then
 	echo ""
@@ -325,7 +348,7 @@ echo -e -n "\033[0;32m $Percent%\033[0m"
 Progressbar $Percent
 echo ""
 echo ""
-wget -t 1 -T 20 -P "$temp_directory" "$i"
+wget -t 1 -T 30 -P "$temp_directory" "$i"
 done
 
 #<--------------------------------------------------->
@@ -555,7 +578,9 @@ do
 	    if [ "$Bitt" == "BitTorrent" ];then
 		nohup "$bittorrent_client" "$download_directory/$clean_tag_bit" &
 		sleep 3
+		echo ""
 		read -p "Delete torrent file ? (y/n) " del_torr
+		echo ""
 
 		if [ "$del_torr" == "y" ] || [ "$del_torr" == "Y" ];then
 			rm "$download_directory/$clean_tag_bit"
@@ -614,6 +639,7 @@ rm "$main_directory"/temp/* 2>/dev/null
 
 }
 
+DEPENDENCY_CHECK
 UPDATE
 DOWNLOAD
 CLEANUP
