@@ -6,8 +6,11 @@ SYNOPSIS
 podster [OPTIONS]
 
 DESCRIPTION
-A podcatcher script, it remembers what podcasts that you downloaded and you could either download or listen to new feeds
+This is a podcatcher script that will prompt you to either download or listen (stream) to the latest podcasts and it will remember the podcasts that you have downloaded so that you only listen to the new shows.
+
 It detects BitTorrent files and opens them with the appropriate client that’s specified in the script
+
+you must first make a text file in the main directory and name the text file podlist.txt
 
 OPTIONS
 -a, --archive		Copies the podcasts to a specified location
