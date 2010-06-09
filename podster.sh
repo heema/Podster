@@ -182,7 +182,8 @@ while [ "$1" != "" ];do
 	       read feed_entered
 	       echo "$feed_entered" >> "$PODLIST"
 	       echo "$feed_entered" >> "$Titles"
-	       clean_up
+	       #clean_up
+	       continue
 	       ;;
 	       2 )
 	       echo -n "Enter Number you want to delete: "
@@ -192,7 +193,8 @@ while [ "$1" != "" ];do
 	       cp "$temp_directory/podlist2.txt" "$PODLIST"
 	       cat "$Titles" | sed -e "$number_delete"d | sed -e '/^$/d' > "$temp_directory/Titles2.txt"
 	       cp "$temp_directory/Titles2.txt" "$Titles"
-	       clean_up
+	       #clean_up
+	       continue
 	       ;;
 	       3 ) 
 	       clear
@@ -205,6 +207,7 @@ while [ "$1" != "" ];do
 	       exit
 	       ;;
 	       4 )
+	       rm "$Titles"
 	       echo "Please wait while downloading titles..."
                for URL in `cat $PODLIST`
 	       do
