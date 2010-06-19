@@ -14,8 +14,8 @@
 # Some code was inspired from bashpodder
 # http://linc.homeunix.org:8080/scripts/bashpodder/
 #
-# last update : 29-05-2010
-VER=1.7.2
+# last update : 19-06-2010
+VER=1.7.3
 #
 #####################################################
 
@@ -493,12 +493,12 @@ NEW_SHOWS=0
 
 for t in `cat final.txt`
 do
-  test=$(grep -c -F "$t" "$history") 2>/dev/null
+  clean=$(basename "$t")
+  test=$(grep -c -F "$clean" "$history") 2>/dev/null
   #status=$(echo $?)
   
      #if [ $status -eq 1 ];then
      if [ $test -eq 0 ];then
-	 clean=$(basename "$t")
 	 TITLE=$(grep -F -B 1 "$clean" title.txt)
 	 echo "$TITLE"
 	 echo ""
@@ -517,10 +517,10 @@ echo ""
 
 for d in `cat final.txt`
 do
-    temp=$(grep -c -F "$d" "$history") 2>/dev/null
-    #exists=$(echo $?)
     clean_title=$(basename "$d")
-    
+    temp=$(grep -c -F "$clean_title" "$history") 2>/dev/null
+    #exists=$(echo $?)
+        
     #if [ $exists -eq 1 ];then
     if [ $temp -eq 0 ];then
 	if [ "$download" == "y" ];then
