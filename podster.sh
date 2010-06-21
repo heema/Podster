@@ -14,8 +14,8 @@
 # Some code was inspired from bashpodder
 # http://linc.homeunix.org:8080/scripts/bashpodder/
 #
-# last update : 19-06-2010
-VER=1.7.3
+# last update : 22-06-2010
+VER=1.7.4
 #
 #####################################################
 
@@ -171,6 +171,7 @@ while [ "$1" != "" ];do
 	     echo "2) Delete feed"
 	     echo "3) Check status of feeds"
 	     echo "4) Refresh titles"
+	     echo "5) Check last update date for the feed"
 	     echo ""
 	     echo "0) Close"
 	     echo ""
@@ -215,6 +216,28 @@ while [ "$1" != "" ];do
 			printf "%-70s %s\n" "$URL" "$TITLE" >> "$Titles"
                done
 	       clean_up
+	       ;;
+	       5 )
+	       echo '<?xml version="1.0"?>              
+        <stylesheet version="1.0"                
+                xmlns="http://www.w3.org/1999/XSL/Transform">
+                <output method="text"/>
+                <template match="/">
+                <value-of select="title"/>
+<value-of select="//rss/channel/title"/><text>      </text>  
+
+<value-of select="//rss/channel/item/pubDate"/><text>&#10;</text>  
+        </template>                                                    
+        </stylesheet>' > "$temp_directory/pubdate.xsl"
+		   clear
+	       for LD in `cat "$PODLIST"`;do
+			LASTUPDATE=$("$PARSE_FEED" "$temp_directory/pubdate.xsl" "$LD" 2>/dev/null)
+	       		echo ""
+	       		printf "%-60s %s\n" "$LD" "$LASTUPDATE"
+		        
+               done
+               clean_up
+	       exit
 	       ;;
 	       * )
 	       clean_up
