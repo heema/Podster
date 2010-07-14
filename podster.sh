@@ -14,8 +14,8 @@
 # Some code was inspired from bashpodder
 # http://linc.homeunix.org:8080/scripts/bashpodder/
 #
-# last update : 22-06-2010
-VER=1.7.4
+# last update : 14-07-2010
+VER=1.7.5
 #
 #####################################################
 
@@ -225,16 +225,14 @@ while [ "$1" != "" ];do
                 <template match="/">
                 <value-of select="title"/>
 <value-of select="//rss/channel/title"/><text>      </text>  
-
 <value-of select="//rss/channel/item/pubDate"/><text>&#10;</text>  
         </template>                                                    
         </stylesheet>' > "$temp_directory/pubdate.xsl"
 		   clear
 	       for LD in `cat "$PODLIST"`;do
-			LASTUPDATE=$("$PARSE_FEED" "$temp_directory/pubdate.xsl" "$LD" 2>/dev/null)
+			LASTUPDATE=$("$PARSE_FEED" "$temp_directory/pubdate.xsl" "$LD" | awk '{print $1,$2,$3,$4,$5}' | head -n 1 2>/dev/null)
 	       		echo ""
 	       		printf "%-60s %s\n" "$LD" "$LASTUPDATE"
-		        
                done
                clean_up
 	       exit
@@ -517,12 +515,19 @@ NEW_SHOWS=0
 for t in `cat final.txt`
 do
   clean=$(basename "$t")
-  test=$(grep -c -F "$clean" "$history") 2>/dev/null
+  same_name=$(grep -c "$clean" final.txt)
+  
+  # checks to see if the podcast name doesnt change
+  if [ $same_name -gt 1 ];then
+	test=$(grep -c -F "$t" "$history") 2>/dev/null
+  else
+	test=$(grep -c -F "$clean" "$history") 2>/dev/null
+  fi
   #status=$(echo $?)
   
      #if [ $status -eq 1 ];then
      if [ $test -eq 0 ];then
-	 TITLE=$(grep -F -B 1 "$clean" title.txt)
+	 TITLE=$(grep -F -B 1 -m 1 "$clean" title.txt)
 	 echo "$TITLE"
 	 echo ""
    	NEW_SHOWS=$((NEW_SHOWS+1))
@@ -541,7 +546,14 @@ echo ""
 for d in `cat final.txt`
 do
     clean_title=$(basename "$d")
-    temp=$(grep -c -F "$clean_title" "$history") 2>/dev/null
+    same_nameA=$(grep -c "$clean_title" final.txt)
+  
+    # checks to see if the podcast name doesnt change
+    if [ $same_nameA -gt 1 ];then
+	temp=$(grep -c -F "$d" "$history") 2>/dev/null
+    else
+	temp=$(grep -c -F "$clean_title" "$history") 2>/dev/null
+    fi
     #exists=$(echo $?)
         
     #if [ $exists -eq 1 ];then
