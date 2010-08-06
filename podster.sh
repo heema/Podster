@@ -153,6 +153,8 @@ while [ "$1" != "" ];do
    case $1 in
              -n|--podcast_number ) podcast_number="$2"
 	                 ;;
+	     -C|--config ) source "$2"
+	                 ;;
              -m|--manage_feeds )
              #cat -n "$PODLIST"
 	     if [ ! -f "$Titles" ];then
@@ -299,6 +301,7 @@ Usage: $0 [OPTIONS]
 Options are:
         -a, --archive                   Copies the podcasts to a specified location
         -n, --podcast_number            Specify the number of podcast per each stream to be downloaded
+        -C, --config                    Specifiy a file which contains variables that will override the default values
         -m, --manage_feeds              Lets you add , delete and check the status of the feeds
         -c, --clean                     Delete the podcasts and playlist
         -p, --play                      Play the playlist
