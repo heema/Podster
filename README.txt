@@ -15,6 +15,7 @@ you must first make a text file in the main directory and name the text file pod
 OPTIONS
 -a, --archive		Copies the podcasts to a specified location
 -n, --podcast_number	Specify the number of podcast per each stream to be downloaded
+-C, --config		Specifiy a file which contains variables that will override the default values
 -m, --manage_feeds	Lets you add , delete and check the status of the feeds
 -c, --clean		Delete the podcasts and playlist
 -p, --play		Play the playlist
