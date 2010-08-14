@@ -14,8 +14,8 @@
 # Some code was inspired from bashpodder
 # http://linc.homeunix.org:8080/scripts/bashpodder/
 #
-# last update : 14-07-2010
-VER=1.7.5
+# last update : 11-08-2010
+VER=1.7.6
 #
 #####################################################
 
@@ -29,6 +29,7 @@ archive_directory="$main_directory/Archive"
 PODLIST="$main_directory/podlist.txt"
 Titles="$main_directory/titles.txt"
 temp_directory="$main_directory/temp"
+lock="$main_directory/lock"
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #NOTE: Anything in the temp_directory will be deleted
@@ -41,6 +42,36 @@ podcast_number="4"
 multimedia_player="xmms"
 stream_player="vlc"
 bittorrent_client="transgui"
+
+#<--------------------------------------------------->
+
+
+usage()
+{
+cat <<EOF
+
+Podster $VER
+Developed by Ibrahim Riad (Heema) - http://sites.google.com/site/heematux/
+
+Usage: $0 [OPTIONS]
+
+Options are:
+        -a, --archive                   Copies the podcasts to a specified location
+        -n, --podcast_number            Specify the number of podcast per each stream to be downloaded
+        -C, --config                    Specifiy a file which contains variables that will override the default values
+        -m, --manage_feeds              Lets you add , delete and check the status of the feeds
+        -c, --clean                     Delete the podcasts and playlist
+        -p, --play                      Play the playlist
+        -d, --download                  Downloads automatically new podcasts
+	-f, --full-catalogue            Adds the previous podcasts to your history without downloading them
+        -h, --help                      Display this text and exit
+
+Examples:
+        $0 -n 1                         Will download the latest podcasts
+        $0 -n 1 -d                      Will download the latest podcasts without confirmation
+
+EOF
+}
 
 #<--------------------------------------------------->
 
@@ -105,13 +136,13 @@ function DEPENDENCY_CHECK {
 #<--------------------------------------------------->
 
 # Creates a lock file to stop a second occurrence of the script
-if [ -f "$main_directory/lock" ];then
+if [ -f "$lock" ];then
 	echo ""
-	echo -e "\033[0;31mThe script is already runing , if it isn't then delete the lock file ("$main_directory/lock")\033[0m"
+	echo -e "\033[0;31mThe script is already runing , if it isn't then delete the lock file ("$lock")\033[0m"
 	echo ""
 	exit
 else
-	touch "$main_directory/lock"
+	touch "$lock"
 fi
 
 # Checks for xmlstarlet or xsltproc if there installed
@@ -122,9 +153,11 @@ if [ "$PARSE_FEED" == "" ]; then
 	echo ""
 	echo -e "\033[0;31mSorry, but this script requires either xmlstarlet or xsltproc and they could not be located.\033[0m"
 	echo ""
-	rm "$main_directory/lock"
+	rm "$lock"
 	exit 0
 fi
+
+#<--------------------------------------------------->
 
 function clean_up {
 
@@ -136,7 +169,7 @@ function clean_up {
 	echo -e "\033[0;31mTemp files removed\033[0m"
 	echo ""
 	sleep 1
-	rm "$main_directory/lock"
+	rm "$lock"
 	rm "$temp_directory"/* 2>/dev/null
 	exit
 }
@@ -146,183 +179,200 @@ trap clean_up SIGHUP SIGINT SIGTERM
 #<--------------------------------------------------->
 
 #####################################################
-# Specifying options
+# Converts long options to short ones for getopts
 #####################################################
 
-while [ "$1" != "" ];do
-   case $1 in
-             -n|--podcast_number ) podcast_number="$2"
-	                 ;;
-	     -C|--config ) source "$2"
-	                 ;;
-             -m|--manage_feeds )
-             #cat -n "$PODLIST"
-	     if [ ! -f "$Titles" ];then
-	     echo "Please wait while downloading titles..."
-             for URL in `cat $PODLIST`
-	     do
-			TITLE=$(wget -q -O- "$URL" | xml sel -t -m '//channel' -v 'title' 2> /dev/null)
-			printf "%-70s %s\n" "$URL" "$TITLE" >> "$Titles"
-	     done
-	     fi
-	     clear
-	     printf "%-8s %-70s %s\n" "Num" "URL" "Title"
-	     cat -n "$Titles"
-	     echo ""
-	     echo "1) Add feed"
-	     echo "2) Delete feed"
-	     echo "3) Check status of feeds"
-	     echo "4) Refresh titles"
-	     echo "5) Check last update date for the feed"
-	     echo ""
-	     echo "0) Close"
-	     echo ""
-	     echo -n "Enter choise: "
-	     read manage_choise
-	     case $manage_choise in
-	       1 )
-	       echo -n "Enter Feed: "
-	       read feed_entered
-	       echo "$feed_entered" >> "$PODLIST"
-	       echo "$feed_entered" >> "$Titles"
-	       #clean_up
-	       continue
-	       ;;
-	       2 )
-	       echo -n "Enter Number you want to delete: "
-	       read number_delete
-	       echo ""
-	       cat "$PODLIST" | sed -e "$number_delete"d | sed -e '/^$/d' > "$temp_directory/podlist2.txt"
-	       cp "$temp_directory/podlist2.txt" "$PODLIST"
-	       cat "$Titles" | sed -e "$number_delete"d | sed -e '/^$/d' > "$temp_directory/Titles2.txt"
-	       cp "$temp_directory/Titles2.txt" "$Titles"
-	       #clean_up
-	       continue
-	       ;;
-	       3 ) 
-	       clear
-	       for x in `cat "$PODLIST"`;do
-	       		echo ""
-               		echo -n "$x          "
-		        wget -t 2 -o "$temp_directory/wget_temp.txt" --spider "$x" && tail -n 2 "$temp_directory/wget_temp.txt" | head -n 1
-               done
-               clean_up
-	       exit
-	       ;;
-	       4 )
-	       rm "$Titles"
-	       echo "Please wait while downloading titles..."
-               for URL in `cat $PODLIST`
-	       do
-			TITLE=$(wget -q -O- "$URL" | xml sel -t -m '//channel' -v 'title' 2> /dev/null)
-			printf "%-70s %s\n" "$URL" "$TITLE" >> "$Titles"
-               done
-	       clean_up
-	       ;;
-	       5 )
-	       echo '<?xml version="1.0"?>              
-        <stylesheet version="1.0"                
-                xmlns="http://www.w3.org/1999/XSL/Transform">
-                <output method="text"/>
-                <template match="/">
-                <value-of select="title"/>
-<value-of select="//rss/channel/title"/><text>      </text>  
-<value-of select="//rss/channel/item/pubDate"/><text>&#10;</text>  
-        </template>                                                    
-        </stylesheet>' > "$temp_directory/pubdate.xsl"
-		   clear
-	       for LD in `cat "$PODLIST"`;do
-			LASTUPDATE=$("$PARSE_FEED" "$temp_directory/pubdate.xsl" "$LD" | awk '{print $1,$2,$3,$4,$5}' | head -n 1 2>/dev/null)
-	       		echo ""
-	       		printf "%-60s %s\n" "$LD" "$LASTUPDATE"
-               done
-               clean_up
-	       exit
-	       ;;
-	       * )
-	       clean_up
-	       exit
-	       ;;
-	       
-	       esac
-	       clean_up
-	       exit
-	       ;;
-             -c|--clean )
-	     echo -n "Are you sure you want to clean your download directory ? (y/n) "
-	     read CLEAN_CHOISE
-	     if [ "CLEAN_CHOISE" == "y" ];then
-	     		rm "$download_directory"/* 2>/dev/null
-			rm "$temp_directory"/* 2>/dev/null
-			echo -e "\033[0;31mDirectory Cleaned\033[0m"
-	     else
-			exit
-	     fi
-	     exit
-             ;;
-	     -a|--archive )
-	     if [ ! -d "$archive_directory" ];then
-	     		echo -e "\033[0;32mMaking archive directory\033[0m"
-			echo ""
-			mkdir "$archive_directory"
-	     fi
-	     # Remove Bittorent files
-	     for br in `ls "$download_directory"`
-	     do
-	     		Bittrm=$(file -b "$download_directory"/"$br" | awk '{print $1}')
-			if [ "$Bittrm" == "BitTorrent" ];then
-				rm "$download_directory"/"$br"
-			fi
-	     done
-	     rm "$download_directory"/latest.m3u 2>/dev/null
-	     mv -v "$download_directory"/* "$archive_directory" 2>/dev/null
-	     rm "$main_directory/lock" 2>/dev/null
-	     echo -e "\033[0;31mPodcasts archived\033[0m"
-			
-	     exit
-             ;;
-	     -p|--play )
-	     $multimedia_player "$download_directory/latest.m3u" &
-	     rm "$main_directory/lock" 2>/dev/null
-	     exit
-	     ;;
-	     -d|--download )
-	     download="y"
-             ;;
-	     -f|--full-catalogue )
-	     full="y"
-             ;;
-	     -h|--help ) echo "
-Podster $VER
-Developed by Ibrahim Riad (Heema) - http://sites.google.com/site/heematux/
-
-Usage: $0 [OPTIONS]
-
-Options are:
-        -a, --archive                   Copies the podcasts to a specified location
-        -n, --podcast_number            Specify the number of podcast per each stream to be downloaded
-        -C, --config                    Specifiy a file which contains variables that will override the default values
-        -m, --manage_feeds              Lets you add , delete and check the status of the feeds
-        -c, --clean                     Delete the podcasts and playlist
-        -p, --play                      Play the playlist
-        -d, --download                  Downloads automatically new podcasts
-	-f, --full-catalogue            Adds the previous podcasts to your history without downloading them
-        -h, --help                      Display this text and exit
-
-Examples:
-        $0 -n 1                         Will download the latest podcasts
-        $0 -n 1 -d                      Will download the latest podcasts without confirmation
-"
-	    rm "$main_directory/lock" 2>/dev/null
-            exit
-            ;;
-   esac
-   shift
+for arg
+do
+    delim=""
+    case "$arg" in
+    # translate --gnu-long-options to -g (short options)
+       --podcast_number) args="${args}-n ";;
+       --config) args="${args}-C ";;
+       --manage_feeds) args="${args}-m ";;
+       --clean) args="${args}-c ";;
+       --play) args="${args}-p ";;
+       --download) args="${args}-d ";;
+       --full-catalogue) args="${args}-f ";;
+       --help) args="${args}-h ";;
+       # pass through anything else
+       *) [[ "${arg:0:1}" == "-" ]] || delim="\""
+           args="${args}${delim}${arg}${delim} ";;
+    esac
 done
+
+# Reset the positional parameters to the short options
+eval set -- $args
 
 #<--------------------------------------------------->
 
-clear
+#####################################################
+# Specifying options
+#####################################################
+
+while getopts ":n:C:mcapdfh" option
+do
+    case $option in
+	n)
+	    # made it readonly so it cant be changed if the config is chosen first
+	    readonly podcast_number="$OPTARG"
+	    ;;
+	C)
+	    source "$OPTARG" 2> /dev/null
+	    ;;
+	m)
+	    if [ ! -f "$Titles" ];then
+	    echo "Please wait while downloading titles..."
+	    for URL in `cat $PODLIST`
+	    do
+		TITLE=$(wget -q -O- "$URL" | xml sel -t -m '//channel' -v 'title' 2> /dev/null)
+		printf "%-70s %s\n" "$URL" "$TITLE" >> "$Titles"
+	    done
+	    fi
+	    clear
+	    printf "%-8s %-70s %s\n" "Num" "URL" "Title"
+	    cat -n "$Titles"
+	    echo ""
+	    echo "1) Add feed"
+	    echo "2) Delete feed"
+	    echo "3) Check status of feeds"
+	    echo "4) Refresh titles"
+	    echo "5) Check last update date for the feed"
+	    echo ""
+	    echo "0) Close"
+	    echo ""
+	    echo -n "Enter choise: "
+	    read manage_choise
+	    case $manage_choise in
+		1 )
+		    echo -n "Enter Feed: "
+		    read feed_entered
+		    echo "$feed_entered" >> "$PODLIST"
+		    echo "$feed_entered" >> "$Titles"
+		    #clean_up
+		    continue
+		    ;;
+		2 )
+		    echo -n "Enter Number you want to delete: "
+		    read number_delete
+		    echo ""
+		    cat "$PODLIST" | sed -e "$number_delete"d | sed -e '/^$/d' > "$temp_directory/podlist2.txt"
+		    cp "$temp_directory/podlist2.txt" "$PODLIST"
+		    cat "$Titles" | sed -e "$number_delete"d | sed -e '/^$/d' > "$temp_directory/Titles2.txt"
+		    cp "$temp_directory/Titles2.txt" "$Titles"
+		    #clean_up
+		    continue
+		    ;;
+		3 )
+		    clear
+		    for x in `cat "$PODLIST"`;do
+			echo ""
+			echo -n "$x          "
+			wget -t 2 -o "$temp_directory/wget_temp.txt" --spider "$x" && tail -n 2 "$temp_directory/wget_temp.txt" | head -n 1
+		    done
+		    clean_up
+		    exit
+		    ;;
+		4 )
+		    rm "$Titles"
+		    echo "Please wait while downloading titles..."
+		    for URL in `cat $PODLIST`
+		    do
+			TITLE=$(wget -q -O- "$URL" | xml sel -t -m '//channel' -v 'title' 2> /dev/null)
+			printf "%-70s %s\n" "$URL" "$TITLE" >> "$Titles"
+		    done
+		    clean_up
+		    ;;
+		5 )
+		    echo '<?xml version="1.0"?>' > "$temp_directory/pubdate.xsl"
+		    echo '<stylesheet version="1.0"' >> "$temp_directory/pubdate.xsl"
+		    echo 'xmlns="http://www.w3.org/1999/XSL/Transform">' >> "$temp_directory/pubdate.xsl"
+		    echo '<output method="text"/>' >> "$temp_directory/pubdate.xsl"
+		    echo '<template match="/">' >> "$temp_directory/pubdate.xsl"
+		    echo '<value-of select="title"/>' >> "$temp_directory/pubdate.xsl"
+		    echo '<value-of select="//rss/channel/title"/><text>      </text>' >> "$temp_directory/pubdate.xsl"
+		    echo '<value-of select="//rss/channel/item/pubDate"/><text>&#10;</text>' >> "$temp_directory/pubdate.xsl"
+		    echo '</template>' >> "$temp_directory/pubdate.xsl"
+		    echo '</stylesheet>' >> "$temp_directory/pubdate.xsl"
+		    clear
+		    for LD in `cat "$PODLIST"`;do
+			LASTUPDATE=$("$PARSE_FEED" "$temp_directory/pubdate.xsl" "$LD" | awk '{print $1,$2,$3,$4,$5}' | head -n 1 2>/dev/null)
+			echo ""
+			printf "%-60s %s\n" "$LD" "$LASTUPDATE"
+		    done
+		    clean_up
+		    exit
+		    ;;
+		* )
+		    clean_up
+		    exit
+		    ;;
+	    esac
+	    clean_up
+	    exit
+	    ;;
+	c)
+		echo -n "Are you sure you want to clean your download directory ? (y/n) "
+		read CLEAN_CHOISE
+		if [ "CLEAN_CHOISE" == "y" ];then
+		    rm "$download_directory"/* 2>/dev/null
+		    rm "$temp_directory"/* 2>/dev/null
+		    echo -e "\033[0;31mDirectory Cleaned\033[0m"
+		else
+		exit
+		fi
+		exit
+		;;
+	a)
+		if [ ! -d "$archive_directory" ];then
+		    echo -e "\033[0;32mMaking archive directory\033[0m"
+		    echo ""
+		    mkdir "$archive_directory"
+		fi
+		# Remove Bittorent files
+		for br in `ls "$download_directory"`
+		do
+		    Bittrm=$(file -b "$download_directory"/"$br" | awk '{print $1}')
+		    if [ "$Bittrm" == "BitTorrent" ];then
+			rm "$download_directory"/"$br"
+		    fi
+		done
+		rm "$download_directory"/latest.m3u 2>/dev/null
+		mv -v "$download_directory"/* "$archive_directory" 2>/dev/null
+		rm "$lock" 2>/dev/null
+		echo -e "\033[0;31mPodcasts archived\033[0m"
+		exit
+		;;
+	p)
+		$multimedia_player "$download_directory/latest.m3u" &
+		rm "$lock" 2>/dev/null
+		exit
+		;;
+	d)
+		download="y"
+		;;
+	f)
+		full="y"
+		;;
+	h)
+		usage
+		rm "$lock" 2>/dev/null
+		exit
+		;;
+	    ?)
+		echo "Unexpected option \"$OPTARG\""
+		echo ""
+		usage
+		;;
+   esac
+
+done
+
+shift $(($OPTIND - 1))
+
+#<--------------------------------------------------->
+
+#clear
 
 #####################################################
 # Creating directories
@@ -526,15 +576,13 @@ do
   else
 	test=$(grep -c -F "$clean" "$history") 2>/dev/null
   fi
-  #status=$(echo $?)
   
-     #if [ $status -eq 1 ];then
-     if [ $test -eq 0 ];then
-	 TITLE=$(grep -F -B 1 -m 1 "$clean" title.txt)
-	 echo "$TITLE"
-	 echo ""
+  if [ $test -eq 0 ];then
+	TITLE=$(grep -F -B 1 -m 1 "$clean" title.txt)
+	echo "$TITLE"
+	echo ""
    	NEW_SHOWS=$((NEW_SHOWS+1))
-     fi
+  fi
 done
 
 echo ""
@@ -557,9 +605,7 @@ do
     else
 	temp=$(grep -c -F "$clean_title" "$history") 2>/dev/null
     fi
-    #exists=$(echo $?)
-        
-    #if [ $exists -eq 1 ];then
+    
     if [ $temp -eq 0 ];then
 	if [ "$download" == "y" ];then
            choise="d"
@@ -605,8 +651,7 @@ do
 	    echo -e "\033[0;32mDownloading ($DOWNLOAD_SHOWS_NUM/$DOWNLOAD_SHOWS_TOTAL) : \033[0m" "$clean_tag"
 	    echo ""
 	
-	# wget -c -P "$download_directory" "$Filepath" && echo "$Filepath" >> "$history"
-	    wget -c -O "$download_directory/$clean_tag" "$Filepath" && echo "$Filepath" >> "$history"
+		wget -c -O "$download_directory/$clean_tag" "$Filepath" && echo "$Filepath" >> "$history"
 	    
 	    # This line for converting the %5B and %5D from the filename and removing question marks at end
 	    clean_tag_bit=$(echo "$clean_tag" | sed -e s/%5B/[/ | sed -e s/%5D/]/ | sed -e s/%28/\(/ | sed -e s/%29/\)/ | sed -e 's/?.*$//')
@@ -675,7 +720,7 @@ CLEANUP () {
 # Cleanup
 #####################################################
 
-rm "$main_directory/lock"
+rm "$lock"
 rm "$main_directory"/temp/* 2>/dev/null
 
 }
