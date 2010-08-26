@@ -14,8 +14,8 @@
 # Some code was inspired from bashpodder
 # http://linc.homeunix.org:8080/scripts/bashpodder/
 #
-# last update : 11-08-2010
-VER=1.7.6
+# last update : 20-08-2010
+VER=1.7.7
 #
 #####################################################
 
@@ -45,8 +45,19 @@ bittorrent_client="transgui"
 
 #<--------------------------------------------------->
 
+# Creates a lock file to stop a second occurrence of the script
+if [ -f "$lock" ];then
+	echo ""
+	echo -e "\033[0;31mThe script is already runing , if it isn't then delete the lock file ("$lock")\033[0m"
+	echo ""
+	exit 1
+else
+	touch "$lock"
+fi
 
-usage()
+#<--------------------------------------------------->
+
+Usage ()
 {
 cat <<EOF
 
@@ -112,38 +123,20 @@ echo "]"
 
 #<--------------------------------------------------->
 
-function DEPENDENCY_CHECK {
-        DEPENDENCIES="wget awk sed"
+DEPENDENCY_CHECK ()
+{
+DEPENDENCIES="wget awk sed"
  
-        deps_ok=YES
-        for dep in $DEPENDENCIES
-        do
-                if ! which $dep &>/dev/null;  then
-                        echo -e "This script requires $dep to run but it is not installed"
-                        #echo -e "If you are running ubuntu or debian you might be able to install $dep with the following  command"
-                        #echo -e "\t\tsudo apt-get install $dep\n"
-                        deps_ok=NO
-                fi
-        done
-        if [[ "$deps_ok" == "NO" ]]; then
-                echo -e "Unmet dependencies, Aborting!"
-                exit 1
-        else
-                return 0
-        fi
-}
-
-#<--------------------------------------------------->
-
-# Creates a lock file to stop a second occurrence of the script
-if [ -f "$lock" ];then
-	echo ""
-	echo -e "\033[0;31mThe script is already runing , if it isn't then delete the lock file ("$lock")\033[0m"
-	echo ""
-	exit
-else
-	touch "$lock"
-fi
+deps_ok=YES
+for dep in $DEPENDENCIES
+do
+    if ! which $dep &>/dev/null;  then
+	echo -e "This script requires $dep to run but it is not installed"
+	#echo -e "If you are running ubuntu or debian you might be able to install $dep with the following  command"
+	#echo -e "\t\tsudo apt-get install $dep\n"
+	deps_ok=NO
+    fi
+done
 
 # Checks for xmlstarlet or xsltproc if there installed
 type -P xmlstarlet &>/dev/null && PARSE_FEED="xmlstarlet tr"
@@ -157,27 +150,37 @@ if [ "$PARSE_FEED" == "" ]; then
 	exit 0
 fi
 
+if [[ "$deps_ok" == "NO" ]]; then
+    echo -e "Unmet dependencies, Aborting!"
+    exit 1
+    else
+	return 0
+fi
+}
+
 #<--------------------------------------------------->
 
-function clean_up {
-
-	# Perform program exit housekeeping
-        echo ""
-	echo ""
-	echo -e "\033[0;31mThe script is exiting\033[0m"
-	echo ""
-	echo -e "\033[0;31mTemp files removed\033[0m"
-	echo ""
-	sleep 1
-	rm "$lock"
-	rm "$temp_directory"/* 2>/dev/null
-	exit
+clean_up ()
+{
+# Perform program exit housekeeping
+echo ""
+echo ""
+echo -e "\033[0;31mThe script is exiting\033[0m"
+echo ""
+echo -e "\033[0;31mTemp files removed\033[0m"
+echo ""
+sleep 1
+rm "$lock"
+rm "$temp_directory"/* 2>/dev/null
+exit 1
 }
 
 trap clean_up SIGHUP SIGINT SIGTERM
 
 #<--------------------------------------------------->
 
+OPTIONS ()
+{
 #####################################################
 # Converts long options to short ones for getopts
 #####################################################
@@ -221,15 +224,26 @@ do
 	    source "$OPTARG" 2> /dev/null
 	    ;;
 	m)
-	    if [ ! -f "$Titles" ];then
-	    echo "Please wait while downloading titles..."
+	    REFRESH_TITLES ()
+	    {
+	    Poslist_lines=$(wc -l "$PODLIST" | awk '{print $1}')
+	    Titles_lines=$(wc -l "$Titles" | awk '{print $1}')
+	    Current_titles_num=1
+	    if [ ! -f "$Titles" ] || [ "$Poslist_lines" -ne "$Titles_lines" ];then
+		rm "$Titles" 2>/dev/null # removes old titles to recreate it
 	    for URL in `cat $PODLIST`
 	    do
+		echo "Please wait while downloading titles... ($Current_titles_num/$Poslist_lines)"
 		TITLE=$(wget -q -O- "$URL" | xml sel -t -m '//channel' -v 'title' 2> /dev/null)
 		printf "%-70s %s\n" "$URL" "$TITLE" >> "$Titles"
+		Current_titles_num=$((Current_titles_num+1))
 	    done
 	    fi
+	    }
+	    REFRESH_TITLES
 	    clear
+	    # while loops till user chooses 0
+	    while [ "$1" != "" ];do
 	    printf "%-8s %-70s %s\n" "Num" "URL" "Title"
 	    cat -n "$Titles"
 	    echo ""
@@ -243,6 +257,7 @@ do
 	    echo ""
 	    echo -n "Enter choise: "
 	    read manage_choise
+	    
 	    case $manage_choise in
 		1 )
 		    echo -n "Enter Feed: "
@@ -256,9 +271,9 @@ do
 		    echo -n "Enter Number you want to delete: "
 		    read number_delete
 		    echo ""
-		    cat "$PODLIST" | sed -e "$number_delete"d | sed -e '/^$/d' > "$temp_directory/podlist2.txt"
+		    sed -e "$number_delete"d -e '/^$/d' "$PODLIST" > "$temp_directory/podlist2.txt"
 		    cp "$temp_directory/podlist2.txt" "$PODLIST"
-		    cat "$Titles" | sed -e "$number_delete"d | sed -e '/^$/d' > "$temp_directory/Titles2.txt"
+		    sed -e "$number_delete"d -e '/^$/d' "$Titles" > "$temp_directory/Titles2.txt"
 		    cp "$temp_directory/Titles2.txt" "$Titles"
 		    #clean_up
 		    continue
@@ -268,19 +283,15 @@ do
 		    for x in `cat "$PODLIST"`;do
 			echo ""
 			echo -n "$x          "
-			wget -t 2 -o "$temp_directory/wget_temp.txt" --spider "$x" && tail -n 2 "$temp_directory/wget_temp.txt" | head -n 1
+			wget -t 2 -o "$temp_directory/wget_temp.txt" --spider "$x"
+			tail -n 2 "$temp_directory/wget_temp.txt" | head -n 1
 		    done
 		    clean_up
-		    exit
+		    exit 0
 		    ;;
 		4 )
-		    rm "$Titles"
-		    echo "Please wait while downloading titles..."
-		    for URL in `cat $PODLIST`
-		    do
-			TITLE=$(wget -q -O- "$URL" | xml sel -t -m '//channel' -v 'title' 2> /dev/null)
-			printf "%-70s %s\n" "$URL" "$TITLE" >> "$Titles"
-		    done
+		    echo "Reset" > "$Titles"	# to force the titles to refresh
+		    REFRESH_TITLES
 		    clean_up
 		    ;;
 		5 )
@@ -301,15 +312,16 @@ do
 			printf "%-60s %s\n" "$LD" "$LASTUPDATE"
 		    done
 		    clean_up
-		    exit
+		    exit 0
 		    ;;
 		* )
 		    clean_up
-		    exit
+		    exit 1
 		    ;;
 	    esac
+	    done
 	    clean_up
-	    exit
+	    exit 0
 	    ;;
 	c)
 		echo -n "Are you sure you want to clean your download directory ? (y/n) "
@@ -318,10 +330,10 @@ do
 		    rm "$download_directory"/* 2>/dev/null
 		    rm "$temp_directory"/* 2>/dev/null
 		    echo -e "\033[0;31mDirectory Cleaned\033[0m"
-		else
-		exit
+		    else
+			exit 0
 		fi
-		exit
+		exit 0
 		;;
 	a)
 		if [ ! -d "$archive_directory" ];then
@@ -341,12 +353,12 @@ do
 		mv -v "$download_directory"/* "$archive_directory" 2>/dev/null
 		rm "$lock" 2>/dev/null
 		echo -e "\033[0;31mPodcasts archived\033[0m"
-		exit
+		exit 0
 		;;
 	p)
 		$multimedia_player "$download_directory/latest.m3u" &
 		rm "$lock" 2>/dev/null
-		exit
+		exit 0
 		;;
 	d)
 		download="y"
@@ -355,14 +367,14 @@ do
 		full="y"
 		;;
 	h)
-		usage
+		Usage
 		rm "$lock" 2>/dev/null
-		exit
+		exit 0
 		;;
-	    ?)
+	?)
 		echo "Unexpected option \"$OPTARG\""
 		echo ""
-		usage
+		Usage
 		;;
    esac
 
@@ -371,9 +383,10 @@ done
 shift $(($OPTIND - 1))
 
 #<--------------------------------------------------->
+}
 
-#clear
-
+CREATING_DIR ()
+{
 #####################################################
 # Creating directories
 #####################################################
@@ -384,6 +397,7 @@ mkdir -p "$download_directory"
 touch "$history"
 
 #<--------------------------------------------------->
+}
 
 UPDATE () {
 
@@ -401,7 +415,7 @@ then
     touch "$PODLIST"
     echo -e "\033[0;31mFile "$PODLIST" is empty\033[0m"
     echo ""
-    exit
+    exit 1
 fi
 
 echo ""
@@ -508,7 +522,6 @@ echo ""
 
 for p in `ls`
 do
-	
 	$PARSE_FEED "$main_directory/parse_enclosure.xsl" $p >> $p.log 2>/dev/null
 	if [ -s "$p.log" ];then
 	    $PARSE_FEED "$main_directory/parse_all.xsl" $p >> title.txt 2>/dev/null
@@ -526,16 +539,12 @@ done
 # Clean the output of the filter
 #####################################################
 
-for x in `ls *.log`
-do
-    cat "$x" | head -n $podcast_number >> final.txt
-done
+head -n $podcast_number *.log | sed -e '/\=\=/d' -e '/^$/d' >> final.txt
 
 #<--------------------------------------------------->
 
-}
-
 clear
+}
 
 DOWNLOAD () {
 
@@ -628,15 +637,15 @@ done
 sort choises.txt -o choises-sorted.txt 2>/dev/null
 
 # Adds the date to the history file
-HISTORYADD=$(cat choises.txt 2>/dev/null | grep -c ^d)
+HISTORYADD=$(grep -c '^d\|^c' choises.txt 2>/dev/null)
 
-if [ $HISTORYADD -ne 0 ];then
+if [ $HISTORYADD -ne 0 2>/dev/null ];then
 	echo "$DATESTR" >> "$history"
 fi
 
 DOWNLOAD_SHOWS_NUM=1
 
-for d in `cat choises-sorted.txt`
+for d in `cat choises-sorted.txt 2>/dev/null`
 do
 
 	Option=$(echo "$d" | cut -c 1)
@@ -726,6 +735,8 @@ rm "$main_directory"/temp/* 2>/dev/null
 }
 
 DEPENDENCY_CHECK
+OPTIONS "$@"	# @ is used to pass the arguments to the function
+CREATING_DIR
 UPDATE
 DOWNLOAD
 CLEANUP
