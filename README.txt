@@ -20,6 +20,7 @@ OPTIONS
 -c, --clean		Delete the podcasts and playlist
 -p, --play		Play the playlist
 -d, --download		Downloads automatically new podcasts
+-l, --download_limit	Limit the download speed to amount bytes per second. Amount is expressed in kilobytes, For example, --download_limit 20 will limit the retrieval rate to 20KB/s
 -f, --full-catalogue	Adds the previous podcasts to your history without downloading them
 -h, --help		Display this text and exit
 

@@ -14,8 +14,8 @@
 # Some code was inspired from bashpodder
 # http://linc.homeunix.org:8080/scripts/bashpodder/
 #
-# last update : 20-08-2010
-VER=1.7.7
+# last update : 14-09-2010
+VER=1.7.8
 #
 #####################################################
 
@@ -74,7 +74,8 @@ Options are:
         -c, --clean                     Delete the podcasts and playlist
         -p, --play                      Play the playlist
         -d, --download                  Downloads automatically new podcasts
-	-f, --full-catalogue            Adds the previous podcasts to your history without downloading them
+        -l, --download_limit            Limit the download speed to amount bytes per second. Amount is expressed in kilobytes, For example, �--download_limit 20� will limit the retrieval rate to 20KB/s
+        -f, --full-catalogue            Adds the previous podcasts to your history without downloading them
         -h, --help                      Display this text and exit
 
 Examples:
@@ -196,6 +197,7 @@ do
        --clean) args="${args}-c ";;
        --play) args="${args}-p ";;
        --download) args="${args}-d ";;
+	   --download_limit) args="${args}-l ";;
        --full-catalogue) args="${args}-f ";;
        --help) args="${args}-h ";;
        # pass through anything else
@@ -213,7 +215,7 @@ eval set -- $args
 # Specifying options
 #####################################################
 
-while getopts ":n:C:mcapdfh" option
+while getopts ":n:C:mcapdl:fh" option
 do
     case $option in
 	n)
@@ -249,9 +251,10 @@ do
 	    echo ""
 	    echo "1) Add feed"
 	    echo "2) Delete feed"
-	    echo "3) Check status of feeds"
-	    echo "4) Refresh titles"
-	    echo "5) Check last update date for the feed"
+	    echo "3) Edit feed list"
+	    echo "4) Check status of feeds"
+	    echo "5) Refresh titles"
+	    echo "6) Check last update date for the feed"
 	    echo ""
 	    echo "0) Close"
 	    echo ""
@@ -279,22 +282,27 @@ do
 		    continue
 		    ;;
 		3 )
+		    $EDITOR "$PODLIST"
+		    continue
+		    ;;
+		4 )
 		    clear
 		    for x in `cat "$PODLIST"`;do
 			echo ""
-			echo -n "$x          "
+			#echo -n "$x          "
 			wget -t 2 -o "$temp_directory/wget_temp.txt" --spider "$x"
-			tail -n 2 "$temp_directory/wget_temp.txt" | head -n 1
+			wget_status=$(tail -n 2 $temp_directory/wget_temp.txt | head -n 1)
+			printf "%-60s %s\n" "$x" "$wget_status"
 		    done
 		    clean_up
 		    exit 0
 		    ;;
-		4 )
+		5 )
 		    echo "Reset" > "$Titles"	# to force the titles to refresh
 		    REFRESH_TITLES
 		    clean_up
 		    ;;
-		5 )
+		6 )
 		    echo '<?xml version="1.0"?>' > "$temp_directory/pubdate.xsl"
 		    echo '<stylesheet version="1.0"' >> "$temp_directory/pubdate.xsl"
 		    echo 'xmlns="http://www.w3.org/1999/XSL/Transform">' >> "$temp_directory/pubdate.xsl"
@@ -307,7 +315,7 @@ do
 		    echo '</stylesheet>' >> "$temp_directory/pubdate.xsl"
 		    clear
 		    for LD in `cat "$PODLIST"`;do
-			LASTUPDATE=$("$PARSE_FEED" "$temp_directory/pubdate.xsl" "$LD" | awk '{print $1,$2,$3,$4,$5}' | head -n 1 2>/dev/null)
+			LASTUPDATE=$("$PARSE_FEED" "$temp_directory/pubdate.xsl" "$LD" | awk -F '      ' '{print $2}' | head -n 1 2>/dev/null)
 			echo ""
 			printf "%-60s %s\n" "$LD" "$LASTUPDATE"
 		    done
@@ -362,6 +370,9 @@ do
 		;;
 	d)
 		download="y"
+		;;
+	l)
+		Download_limit="--limit-rate=$OPTARG""k"
 		;;
 	f)
 		full="y"
@@ -660,7 +671,7 @@ do
 	    echo -e "\033[0;32mDownloading ($DOWNLOAD_SHOWS_NUM/$DOWNLOAD_SHOWS_TOTAL) : \033[0m" "$clean_tag"
 	    echo ""
 	
-		wget -c -O "$download_directory/$clean_tag" "$Filepath" && echo "$Filepath" >> "$history"
+		wget -c $Download_limit -O "$download_directory/$clean_tag" "$Filepath" && echo "$Filepath" >> "$history"
 	    
 	    # This line for converting the %5B and %5D from the filename and removing question marks at end
 	    clean_tag_bit=$(echo "$clean_tag" | sed -e s/%5B/[/ | sed -e s/%5D/]/ | sed -e s/%28/\(/ | sed -e s/%29/\)/ | sed -e 's/?.*$//')
