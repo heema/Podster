@@ -375,6 +375,9 @@ do
 		Download_limit="--limit-rate=$OPTARG""k"
 		;;
 	f)
+		Datet=$(date +'%d-%m-%Y')
+		gzip -c "$history" > "$history"_"$Datet".gz
+		rm "$history"
 		full="y"
 		;;
 	h)
@@ -386,6 +389,7 @@ do
 		echo "Unexpected option \"$OPTARG\""
 		echo ""
 		Usage
+		exit 1
 		;;
    esac
 
