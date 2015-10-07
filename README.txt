@@ -1,4 +1,3 @@
-Contact: heematux@gmail.com to correct errors or typos.
 
 NAME: podster - podcatching client
 
@@ -32,4 +31,4 @@ podster -n 1              Will download the latest podcasts
 podster -n 1 -d           Will download the latest podcasts without confirmation
 
 AUTHOR
-Ibrahim Riad [Heema] (heematux@gmail.com)
+Heema
