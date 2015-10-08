@@ -14,8 +14,8 @@
 # Some code was inspired from bashpodder
 # http://linc.homeunix.org:8080/scripts/bashpodder/
 #
-# last update : 14-09-2010
-VER=1.7.8
+# last update : 12-06-2013
+VER=1.9
 #
 #####################################################
 
@@ -36,8 +36,8 @@ lock="$main_directory/lock"
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 history="$main_directory/downloaded_history.txt"
-DATESTR=`date +'%d-%m-%Y %H:%M'`
-podcast_number="4"
+DATESTR=$(date +'%d-%m-%Y %H:%M')
+podcast_number="10"
 #alarm="/usr/lib/openoffice/share/gallery/sounds/applause.wav"
 multimedia_player="xmms"
 stream_player="vlc"
@@ -74,7 +74,7 @@ Options are:
         -c, --clean                     Delete the podcasts and playlist
         -p, --play                      Play the playlist
         -d, --download                  Downloads automatically new podcasts
-        -l, --download_limit            Limit the download speed to amount bytes per second. Amount is expressed in kilobytes, For example, �--download_limit 20� will limit the retrieval rate to 20KB/s
+        -l, --download_limit            Limit the download speed to amount bytes per second. Amount is expressed in kilobytes, For example, ‘--download_limit 20’ will limit the retrieval rate to 20KB/s
         -f, --full-catalogue            Adds the previous podcasts to your history without downloading them
         -h, --help                      Display this text and exit
 
@@ -94,26 +94,26 @@ SOME="="
 EMPTY=" "
 COLUMNS=50
 
-LEFT=$(($COLUMNS*100/20))
-BAR_LENGTH=$(($(($COLUMNS*100))-$((2*$LEFT))-200))
-DOT=$(($BAR_LENGTH/100))
-PERCENT=$(($1*$DOT))
+LEFT=$((COLUMNS*100/20))
+BAR_LENGTH=$(($((COLUMNS*100))-$((2*LEFT))-200))
+DOT=$((BAR_LENGTH/100))
+PERCENT=$(($1*DOT))
 
 NUMCHARS=0
 
-for ((j=0;$j<$LEFT;j=$j+100))
+for ((j=0;j<LEFT;j=j+100))
 do
 	echo -n " "
 done
 echo -n "["
 
-for ((j=0;$j<$PERCENT;j=$j+100))
+for ((j=0;j<PERCENT;j=j+100))
 do
 	echo -n "$SOME"
 	NUMCHARS=$NUMCHARS+1
 done
 
-for ((j=$PERCENT;j<$BAR_LENGTH && $NUMCHARS<$((BAR_LENGTH/100));j=$j+100))
+for ((j=PERCENT;j<BAR_LENGTH && NUMCHARS<$((BAR_LENGTH/100));j=j+100))
 do
 	echo -n "$EMPTY"
 	NUMCHARS=$NUMCHARS+1
@@ -131,7 +131,7 @@ DEPENDENCIES="wget awk sed"
 deps_ok=YES
 for dep in $DEPENDENCIES
 do
-    if ! which $dep &>/dev/null;  then
+    if ! which "$dep" &>/dev/null;  then
 	echo -e "This script requires $dep to run but it is not installed"
 	#echo -e "If you are running ubuntu or debian you might be able to install $dep with the following  command"
 	#echo -e "\t\tsudo apt-get install $dep\n"
@@ -207,7 +207,7 @@ do
 done
 
 # Reset the positional parameters to the short options
-eval set -- $args
+eval set -- "$args"
 
 #<--------------------------------------------------->
 
@@ -233,7 +233,7 @@ do
 	    Current_titles_num=1
 	    if [ ! -f "$Titles" ] || [ "$Poslist_lines" -ne "$Titles_lines" ];then
 		rm "$Titles" 2>/dev/null # removes old titles to recreate it
-	    for URL in `cat $PODLIST`
+	    for URL in $(cat $PODLIST)
 	    do
 		echo "Please wait while downloading titles... ($Current_titles_num/$Poslist_lines)"
 		TITLE=$(wget -q -O- "$URL" | xml sel -t -m '//channel' -v 'title' 2> /dev/null)
@@ -287,7 +287,7 @@ do
 		    ;;
 		4 )
 		    clear
-		    for x in `cat "$PODLIST"`;do
+		    for x in $(cat "$PODLIST");do
 			echo ""
 			#echo -n "$x          "
 			wget -t 2 -o "$temp_directory/wget_temp.txt" --spider "$x"
@@ -314,7 +314,7 @@ do
 		    echo '</template>' >> "$temp_directory/pubdate.xsl"
 		    echo '</stylesheet>' >> "$temp_directory/pubdate.xsl"
 		    clear
-		    for LD in `cat "$PODLIST"`;do
+		    for LD in $(cat "$PODLIST");do
 			LASTUPDATE=$("$PARSE_FEED" "$temp_directory/pubdate.xsl" "$LD" | awk -F '      ' '{print $2}' | head -n 1 2>/dev/null)
 			echo ""
 			printf "%-60s %s\n" "$LD" "$LASTUPDATE"
@@ -350,21 +350,21 @@ do
 		    mkdir "$archive_directory"
 		fi
 		# Remove Bittorent files
-		for br in `ls "$download_directory"`
+		for br in $(ls "$download_directory")
 		do
 		    Bittrm=$(file -b "$download_directory"/"$br" | awk '{print $1}')
 		    if [ "$Bittrm" == "BitTorrent" ];then
 			rm "$download_directory"/"$br"
 		    fi
 		done
-		rm "$download_directory"/latest.m3u 2>/dev/null
+		rm "$download_directory"/podster.m3u 2>/dev/null
 		mv -v "$download_directory"/* "$archive_directory" 2>/dev/null
 		rm "$lock" 2>/dev/null
 		echo -e "\033[0;31mPodcasts archived\033[0m"
 		exit 0
 		;;
 	p)
-		$multimedia_player "$download_directory/latest.m3u" &
+		$multimedia_player "$download_directory/podster.m3u" &
 		rm "$lock" 2>/dev/null
 		exit 0
 		;;
@@ -395,7 +395,7 @@ do
 
 done
 
-shift $(($OPTIND - 1))
+shift $((OPTIND - 1))
 
 #<--------------------------------------------------->
 }
@@ -437,11 +437,11 @@ echo ""
 
 Total=$(cat -n "$PODLIST" | awk '{print $1}' | tail -n 1)
 
-for i in `cat "$PODLIST"`
+for i in $(cat "$PODLIST")
 do
 Current=$(ls "$temp_directory" | wc -l)
-Sub=$(($Current*100))
-Percent=$(($Sub/$Total))
+Sub=$((Current*100))
+Percent=$((Sub/Total))
 
 clear
 
@@ -535,7 +535,7 @@ echo ""
 echo "Please wait... Parsing the feeds"
 echo ""
 
-for p in `ls`
+for p in $(ls)
 do
 	$PARSE_FEED "$main_directory/parse_enclosure.xsl" $p >> $p.log 2>/dev/null
 	if [ -s "$p.log" ];then
@@ -589,19 +589,19 @@ echo ""
 
 NEW_SHOWS=0
 
-for t in `cat final.txt`
+for t in $(cat final.txt)
 do
   clean=$(basename "$t")
   same_name=$(grep -c "$clean" final.txt)
   
   # checks to see if the podcast name doesnt change
-  if [ $same_name -gt 1 ];then
+  if [ "$same_name" -gt 1 ];then
 	test=$(grep -c -F "$t" "$history") 2>/dev/null
   else
 	test=$(grep -c -F "$clean" "$history") 2>/dev/null
   fi
   
-  if [ $test -eq 0 ];then
+  if [ "$test" -eq 0 ];then
 	TITLE=$(grep -F -B 1 -m 1 "$clean" title.txt)
 	echo "$TITLE"
 	echo ""
@@ -618,19 +618,19 @@ echo "Actions:"
 echo "--------"
 echo ""
 
-for d in `cat final.txt`
+for d in $(cat final.txt)
 do
     clean_title=$(basename "$d")
     same_nameA=$(grep -c "$clean_title" final.txt)
   
     # checks to see if the podcast name doesnt change
-    if [ $same_nameA -gt 1 ];then
+    if [ "$same_nameA" -gt 1 ];then
 	temp=$(grep -c -F "$d" "$history") 2>/dev/null
     else
 	temp=$(grep -c -F "$clean_title" "$history") 2>/dev/null
     fi
     
-    if [ $temp -eq 0 ];then
+    if [ "$temp" -eq 0 ];then
 	if [ "$download" == "y" ];then
            choise="d"
 	elif [ "$full" == "y" ];then
@@ -654,13 +654,13 @@ sort choises.txt -o choises-sorted.txt 2>/dev/null
 # Adds the date to the history file
 HISTORYADD=$(grep -c '^d\|^c' choises.txt 2>/dev/null)
 
-if [ $HISTORYADD -ne 0 2>/dev/null ];then
+if [ "$HISTORYADD" -ne 0 2>/dev/null ];then
 	echo "$DATESTR" >> "$history"
 fi
 
 DOWNLOAD_SHOWS_NUM=1
 
-for d in `cat choises-sorted.txt 2>/dev/null`
+for d in $(cat choises-sorted.txt 2>/dev/null)
 do
 
 	Option=$(echo "$d" | cut -c 1)
@@ -682,10 +682,26 @@ do
 	    
 	    mv "$download_directory/$clean_tag" "$download_directory/$clean_tag_bit" 2>/dev/null
 	    
+		### Check if its a gzipped torrent ###
+	    
+	    GBitt=$(file -b "$download_directory/$clean_tag_bit" | awk '{print $1}')
+		
+	    if [ "$GBitt" == "gzip" ];then
+		echo ""
+		echo -e "\e[1;37mThis is a gzipped torrent file, decompressing it...\e[0m"
+		echo ""
+		zcat "$download_directory/$clean_tag_bit" > "$download_directory/torrage.torrent"
+		rm "$download_directory/$clean_tag_bit"
+		mv "$download_directory/torrage.torrent" "$download_directory/$clean_tag_bit"
+		fi
+		
 	    ### Check if its a torrent ###
 	    
 	    Bitt=$(file -b "$download_directory/$clean_tag_bit" | awk '{print $1}')
 	    if [ "$Bitt" == "BitTorrent" ];then
+		echo ""
+		echo -e "\e[1;37mThis is a torrent file, opening associated app...\e[0m"
+		echo ""
 		nohup "$bittorrent_client" "$download_directory/$clean_tag_bit" &
 		sleep 3
 		echo ""
@@ -732,7 +748,7 @@ done
 # Create an m3u playlist
 #####################################################
 
-ls -1rc "$download_directory" | grep -v m3u > "$download_directory/latest.m3u"
+ls -1rc "$download_directory" | grep -v m3u > "$download_directory/podster.m3u"
 
 #<--------------------------------------------------->
 
