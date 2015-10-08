@@ -6,8 +6,7 @@
 # you must first make a text file in the main directory
 # and name the text file podlist.txt
 # 
-# Made By : Ibrahim Riad (Heema)
-# http://sites.google.com/site/heematux/
+# Made By : (Heema)
 #
 # Dependencies : wget , awk , sed , xmlstarlet or xsltproc
 #
