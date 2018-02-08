@@ -13,8 +13,8 @@
 # Some code was inspired from bashpodder
 # http://linc.homeunix.org:8080/scripts/bashpodder/
 #
-# last update : 12-06-2013
-VER=1.9
+# last update : 08-02-2018
+VER=1.10
 #
 #####################################################
 
@@ -528,6 +528,33 @@ then
         </stylesheet>' > "$main_directory/parse_all_link.xsl"
 fi
 
+if [ ! -f "$main_directory/parse_yt.xsl" ]
+then
+	echo ""
+	echo '<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0" 
+xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:atom="http://www.w3.org/2005/Atom">
+<xsl:output method="text"/>
+    <xsl:template match="atom:entry">
+https://www.youtube.com/watch?v=<xsl:value-of select="yt:videoId"/>
+    </xsl:template> 
+</xsl:stylesheet>' > "$main_directory/parse_all_link.xsl"
+fi
+
+if [ ! -f "$main_directory/parse_yt_all.xsl" ]
+then
+	echo ""
+	echo '<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0" 
+xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:atom="http://www.w3.org/2005/Atom">
+<xsl:output method="text"/>
+    <xsl:template match="atom:entry">
+        <xsl:value-of select="atom:title"/>
+https://www.youtube.com/watch?v=<xsl:value-of select="yt:videoId"/>
+    </xsl:template> 
+</xsl:stylesheet>' > "$main_directory/parse_all_link.xsl"
+fi
+
 cd "$temp_directory"
 
 echo ""
@@ -543,6 +570,9 @@ do
 	    # if feed doesnt contain enclosure tag it will use the link tag instead
 	    $PARSE_FEED "$main_directory/parse_link.xsl" $p >> $p.log 2>/dev/null
 	    $PARSE_FEED "$main_directory/parse_all_link.xsl" $p >> title.txt 2>/dev/null
+	    # if feed is a youtube feed
+	    $PARSE_FEED "$main_directory/parse_yt.xsl" "$p" | sed -e '1,11d' >> $p.log 2>/dev/null
+	    $PARSE_FEED "$main_directory/parse_yt_all.xsl" "$p" | sed -e '1,11d' >> title.txt 2>/dev/null
 	fi
 	
 done
@@ -711,6 +741,17 @@ do
 			rm "$download_directory/$clean_tag_bit"
 		fi
 
+	    fi
+
+            ### Check if its a youtube ###
+	    
+	    YBitt=$(file -b "$download_directory/$clean_tag_bit" | awk '{print $1}')
+		
+	    if [ "$YBitt" == "HTML" ] && [[ $clean_tag_bit == watch* ]];then
+		echo ""
+		echo -e "\e[1;37mThis is a youtube file, downloading it...\e[0m"
+		echo ""
+                youtube-dl -c --restrict-filenames --extract-audio --audio-format mp3 --audio-quality 128K --embed-thumbnail --add-metadata -o "$download_directory/%(title)s.%(ext)s" "https://www.youtube.com/$clean_tag"
 	    fi
 
 	DOWNLOAD_SHOWS_NUM=$((DOWNLOAD_SHOWS_NUM+1))
