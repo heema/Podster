@@ -61,7 +61,7 @@ Usage ()
 cat <<EOF
 
 Podster $VER
-Developed by Ibrahim Riad (Heema) - http://sites.google.com/site/heematux/
+Developed by (Heema) - https://github.com/heema/Podster
 
 Usage: $0 [OPTIONS]
 
